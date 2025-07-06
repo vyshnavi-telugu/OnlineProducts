@@ -1,0 +1,369 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport"
+      content="width=device-width,initial-scale=1.0,user-scalable=yes" />
+<title>Mini-Meesho Clone</title>
+<style>
+/* -------- RESET & TOKENS -------- */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#14b8a6;--brand-dk:#0d9488;
+  --bg:#f1f5f9;--card:#fff;--text:#0f172a;--sub:#64748b;
+}
+body,html{height:100%;font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);}
+
+/* -------- UTIL -------- */
+.hidden{display:none!important}
+.btn{background:var(--brand);color:#fff;padding:.6rem 1.2rem;border:0;border-radius:.5rem;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--brand-dk)}
+input,textarea{width:100%;padding:.6rem;border:1px solid #cbd5e1;border-radius:.5rem}
+input:focus,textarea:focus{outline:2px solid var(--brand)}
+.grid{display:grid;gap:1rem}@media(min-width:640px){.grid{grid-template-columns:repeat(2,1fr)}}@media(min-width:1024px){.grid{grid-template-columns:repeat(4,1fr)}}
+.card{background:var(--card);border-radius:.75rem;box-shadow:0 2px 6px rgba(0,0,0,.08);overflow:hidden;transition:.2s}
+.card:hover{transform:translateY(-3px)}
+.icon{cursor:pointer;user-select:none}
+
+/* -------- PAGES -------- */
+.page{min-height:100%;display:flex;align-items:center;justify-content:center;padding:2rem;background:linear-gradient(120deg,#ffe4e6,#ccfbf1)}
+.auth-box{background:#fff;padding:2rem;border-radius:1rem;box-shadow:0 4px 12px rgba(0,0,0,.1);width:100%;max-width:20rem;display:flex;flex-direction:column;gap:1rem}
+.auth-box h2{text-align:center;font-size:1.5rem;font-weight:600}
+.link{color:var(--brand-dk);font-weight:600;cursor:pointer}
+.msg{color:#dc2626;font-size:.875rem;text-align:center}
+
+#appPage{display:flex;flex-direction:column;min-height:100%}
+.app-header{background:#fff;display:flex;justify-content:space-between;align-items:center;padding:1rem;box-shadow:0 2px 4px rgba(0,0,0,.04);position:sticky;top:0;z-index:10}
+.app-title{font-size:1.25rem;font-weight:700;display:flex;align-items:center;gap:.25rem}
+.badge{background:#dc2626;color:#fff;border-radius:9999px;font-size:.75rem;padding:0 .4rem;margin-left:.2rem}
+.main-area{flex:1;padding:1rem}
+
+/* cart table */
+table{width:100%;border-collapse:collapse}
+th,td{padding:.5rem;border-bottom:1px solid #e2e8f0;text-align:left}
+.qty-btn{padding:.25rem .5rem;border:1px solid #94a3b8;border-radius:.25rem;background:#fff;cursor:pointer}
+.qty-btn:hover{background:#e2e8f0}
+</style>
+</head>
+<body>
+<!-- ---------- SIGN-UP ---------- -->
+<div id="signupPage" class="page">
+  <form class="auth-box" onsubmit="signup(event)">
+    <h2>Create Account</h2>
+    <input name="name" placeholder="Name" required />
+    <input name="email" placeholder="Email" type="email" required />
+    <input name="pass" placeholder="Password" type="password" required />
+    <p id="suMsg" class="msg hidden"></p>
+    <button class="btn">Sign Up</button>
+    <p style="text-align:center;font-size:.875rem">
+      Already registered? <span class="link" onclick="showLogin()">Log in</span>
+    </p>
+  </form>
+</div>
+
+<!-- ---------- LOG-IN ---------- -->
+<div id="loginPage" class="page hidden">
+  <form class="auth-box" onsubmit="login(event)">
+    <h2>Log in</h2>
+    <input name="email" placeholder="Email" type="email" required />
+    <input name="pass" placeholder="Password" type="password" required />
+    <p id="liMsg" class="msg hidden"></p>
+    <button class="btn">Log In</button>
+    <p style="text-align:center;font-size:.875rem">
+      No account? <span class="link" onclick="showSignup()">Sign up</span>
+    </p>
+  </form>
+</div>
+
+<!-- ---------- APP (HOME + CART + CHECKOUT + CONFIRM) ---------- -->
+<div id="appPage" class="hidden">
+  <header class="app-header">
+    <span class="app-title">Mini Meesho&nbsp;<small style="font-size:.75rem">clone</small></span>
+    <div>
+      <span class="icon" onclick="viewOrders()" title="Orders">📦</span>
+      <span class="icon" onclick="viewCart()" title="Cart">
+        🛒<span id="cartBadge" class="badge hidden">0</span>
+      </span>
+      <button class="btn" style="margin-left:.5rem" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- HOME -->
+  <main id="homePage" class="main-area">
+    <section id="prodGrid" class="grid"></section>
+  </main>
+
+  <!-- CART -->
+  <main id="cartPage" class="main-area hidden">
+    <h2 style="margin-bottom:1rem">Your Cart</h2>
+    <div id="cartEmpty" class="hidden">Cart is empty.</div>
+    <div id="cartContent" class="hidden">
+      <table id="cartTable"></table>
+      <p style="text-align:right;margin-top:1rem;font-weight:700">
+        Total: ₹<span id="cartTotal">0</span>
+      </p>
+      <button class="btn" onclick="proceedCheckout()">Checkout</button>
+      <button class="btn" style="margin-left:.5rem;background:#94a3b8"
+              onclick="showHome()">Continue Shopping</button>
+    </div>
+  </main>
+
+  <!-- CHECKOUT -->
+  <main id="checkoutPage" class="main-area hidden">
+    <h2 style="margin-bottom:1rem">Delivery Details</h2>
+    <form onsubmit="placeOrder(event)" style="display:flex;flex-direction:column;gap:1rem;max-width:400px">
+      <textarea name="addr" rows="3" placeholder="Full Address" required></textarea>
+      <input name="city" placeholder="City" required />
+      <input name="pin" placeholder="Pincode" required />
+      <input name="phone" placeholder="Phone" required />
+      <button class="btn">Place Order</button>
+      <button class="btn" type="button" style="background:#94a3b8"
+              onclick="viewCart()">Back to Cart</button>
+    </form>
+  </main>
+
+  <!-- CONFIRM -->
+  <main id="confirmPage" class="main-area hidden" style="text-align:center">
+    <h2>🎉 Order Confirmed!</h2>
+    <p style="margin:1rem 0">Your order&nbsp;<b id="orderId"></b> is placed.</p>
+    <button class="btn" onclick="showHome()">Shop More</button>
+  </main>
+
+  <!-- ORDERS (optional simple list) -->
+  <main id="ordersPage" class="main-area hidden">
+    <h2 style="margin-bottom:1rem">My Orders</h2>
+    <div id="ordersList"></div>
+    <button class="btn" style="margin-top:1rem" onclick="showHome()">Home</button>
+  </main>
+</div>
+
+<script>
+/* ---------- SAMPLE PRODUCTS ---------- */
+const PRODUCTS=[
+ {id:1,title:"Kanchipuram Silk Saree",desc:"Traditional hand-woven saree",
+  price:1299,img:"https://dummyimage.com/300x400/ffc0cb/000000&text=Silk+Saree"},
+ {id:2,title:"Artificial Kundan Necklace",desc:"Premium imitation jewellery set",
+  price:699,img:"https://dummyimage.com/300x400/fffacd/000000&text=Kundan+Set"},
+ {id:3,title:"Rayon Kurti Combo (2 pcs)",desc:"Printed kurtis pack",
+  price:899,img:"https://dummyimage.com/300x400/bae6fd/000000&text=Kurti+Combo"},
+ {id:4,title:"Men's Casual Sneakers",desc:"Lightweight stylish shoes",
+  price:1199,img:"https://dummyimage.com/300x400/d1d5db/000000&text=Sneakers"}
+];
+
+/* ---------- STORAGE KEYS ---------- */
+const KEY_USERS="miniMeeshoUsers";
+const KEY_CART="miniMeeshoCart";
+const KEY_LIKES="miniMeeshoLikes";
+const KEY_ORDERS="miniMeeshoOrders";
+
+/* ---------- HELPERS ---------- */
+const $=id=>document.getElementById(id);
+const show=el=>el.classList.remove("hidden");
+const hide=el=>el.classList.add("hidden");
+const getUser=()=>localStorage.getItem("token");
+const getParsed=(key,def)=>
+  JSON.parse(localStorage.getItem(key)||JSON.stringify(def));
+const setParsed=(key,obj)=>localStorage.setItem(key,JSON.stringify(obj));
+
+/* ---------- AUTH ---------- */
+function signup(e){
+  e.preventDefault();
+  const {name,email,pass}=e.target.elements;
+  const users=getParsed(KEY_USERS,[]);
+  if(users.some(u=>u.email===email.value)){
+    showMsg("suMsg","Email already used");return;
+  }
+  users.push({name:name.value,email:email.value,pass:pass.value});
+  setParsed(KEY_USERS,users);
+  localStorage.setItem("token",email.value);
+  loadApp();
+}
+function login(e){
+  e.preventDefault();
+  const {email,pass}=e.target.elements;
+  const user=getParsed(KEY_USERS,[]).find(u=>u.email===email.value&&u.pass===pass.value);
+  if(!user){showMsg("liMsg","Invalid credentials");return;}
+  localStorage.setItem("token",email.value);
+  loadApp();
+}
+function logout(){localStorage.removeItem("token");showLogin();}
+function showMsg(id,txt){const el=$(id);el.textContent=txt;show(el);setTimeout(()=>hide(el),3e3);}
+
+/* ---------- CART / LIKE DATA PER USER ---------- */
+const cartOf=user=>{
+  const c=getParsed(KEY_CART,{});
+  return c[user]??[];
+};
+const saveCart=(user,arr)=>{
+  const c=getParsed(KEY_CART,{});
+  c[user]=arr;setParsed(KEY_CART,c);
+  updateBadge(user);
+};
+const likesOf=user=>{
+  const l=getParsed(KEY_LIKES,{});
+  return new Set(l[user]??[]);
+};
+const saveLikes=(user,setLike)=>{
+  const l=getParsed(KEY_LIKES,{});
+  l[user]=[...setLike];setParsed(KEY_LIKES,l);
+};
+const ordersOf=user=>{
+  const o=getParsed(KEY_ORDERS,{});
+  return o[user]??[];
+};
+const saveOrders=(user,arr)=>{
+  const o=getParsed(KEY_ORDERS,{});
+  o[user]=arr;setParsed(KEY_ORDERS,o);
+};
+
+/* ---------- UI RENDER ---------- */
+function renderProducts(){
+  const user=getUser();const likes=likesOf(user);
+  const grid=$("prodGrid");grid.innerHTML="";
+  PRODUCTS.forEach(p=>{
+    grid.insertAdjacentHTML("beforeend",`
+      <div class="card">
+        <img src="${p.img}" alt="${p.title}"
+             style="width:100%;height:10rem;object-fit:cover">
+        <div style="padding:1rem;display:flex;flex-direction:column;gap:.5rem">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="font-weight:600;font-size:1rem;flex:1">${p.title}</h3>
+            <span class="icon" onclick="toggleLike(${p.id})"
+                  title="Like">${likes.has(p.id)?"❤️":"🤍"}</span>
+          </div>
+          <p style="font-size:.875rem;color:var(--sub)">${p.desc}</p>
+          <p style="font-weight:700;color:var(--brand-dk)">₹${p.price}</p>
+          <button class="btn" onclick="addToCart(${p.id})">Add to Cart</button>
+        </div>
+      </div>
+    `);
+  });
+}
+function updateBadge(user){
+  const badge=$("cartBadge");
+  const count=cartOf(user).reduce((s,i)=>s+i.qty,0);
+  badge.textContent=count;
+  count?show(badge):hide(badge);
+}
+
+/* ---------- LIKE ---------- */
+function toggleLike(pid){
+  const user=getUser();if(!user)return;
+  const likes=likesOf(user);
+  likes.has(pid)?likes.delete(pid):likes.add(pid);
+  saveLikes(user,likes);
+  renderProducts();
+}
+
+/* ---------- CART OPERATIONS ---------- */
+function addToCart(pid){
+  const user=getUser();if(!user)return;
+  const cart=cartOf(user);
+  const item=cart.find(i=>i.pid===pid);
+  item?item.qty++:cart.push({pid,qty:1});
+  saveCart(user,cart);
+  alert("Added to cart");
+}
+function viewCart(){
+  renderCart();hideAllPages();show($("cartPage"));
+}
+function renderCart(){
+  const user=getUser();const cart=cartOf(user);
+  const empty=$("cartEmpty"),content=$("cartContent"),table=$("cartTable");
+  if(!cart.length){show(empty);hide(content);return;}
+  hide(empty);show(content);
+  let total=0;table.innerHTML="<tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr>";
+  cart.forEach((ci,idx)=>{
+    const prod=PRODUCTS.find(p=>p.id===ci.pid);
+    const line=prod.price*ci.qty;total+=line;
+    table.insertAdjacentHTML("beforeend",`
+      <tr>
+        <td>${prod.title}</td>
+        <td>
+          <button class="qty-btn" onclick="updQty(${idx},-1)">−</button>
+          ${ci.qty}
+          <button class="qty-btn" onclick="updQty(${idx},1)">＋</button>
+        </td>
+        <td>₹${line}</td>
+        <td><span class="icon" onclick="removeItem(${idx})" title="Remove">🗑️</span></td>
+      </tr>
+    `);
+  });
+  $("cartTotal").textContent=total;
+}
+function updQty(index,delta){
+  const user=getUser();const cart=cartOf(user);
+  cart[index].qty+=delta;if(cart[index].qty<=0)cart.splice(index,1);
+  saveCart(user,cart);renderCart();
+}
+function removeItem(index){
+  const user=getUser();const cart=cartOf(user);
+  cart.splice(index,1);saveCart(user,cart);renderCart();
+}
+function proceedCheckout(){
+  if(!cartOf(getUser()).length)return;
+  hideAllPages();show($("checkoutPage"));
+}
+
+/* ---------- ORDER ---------- */
+function placeOrder(e){
+  e.preventDefault();
+  const user=getUser();const cart=cartOf(user);
+  if(!cart.length)return;
+  const {addr,city,pin,phone}=e.target.elements;
+  const items=cart.map(ci=>{
+    const p=PRODUCTS.find(pr=>pr.id===ci.pid);
+    return {...p,qty:ci.qty};
+  });
+  const total=cart.reduce((s,ci)=>{
+    const p=PRODUCTS.find(pr=>pr.id===ci.pid);
+    return s+p.price*ci.qty;
+  },0);
+  const orderId="OD"+Date.now();
+  const order={id:orderId,items,total,addr:addr.value,city:city.value,pin:pin.value,phone:phone.value,date:new Date().toLocaleString()};
+  const ords=ordersOf(user);ords.push(order);saveOrders(user,ords);
+  saveCart(user,[]); // clear cart
+  $("orderId").textContent=orderId;
+  hideAllPages();show($("confirmPage"));
+  updateBadge(user);
+}
+function viewOrders(){
+  const user=getUser();const list=$("ordersList");
+  const ords=ordersOf(user);list.innerHTML="";
+  if(!ords.length){list.textContent="No orders yet.";hideAllPages();show($("ordersPage"));return;}
+  ords.slice().reverse().forEach(o=>{
+    list.insertAdjacentHTML("beforeend",`
+      <div class="card" style="margin-bottom:1rem;padding:1rem">
+        <b>Order&nbsp;${o.id}</b> <span style="float:right">${o.date}</span><br>
+        ${o.items.map(i=>`${i.title} ×${i.qty}`).join(", ")}<br>
+        <b>Total:</b> ₹${o.total}<br>
+        <b>Delivery&nbsp;to:</b> ${o.addr}, ${o.city}-${o.pin}, Ph:${o.phone}
+      </div>
+    `);
+  });
+  hideAllPages();show($("ordersPage"));
+}
+
+/* ---------- NAVIGATION HELP ---------- */
+function hideAllPages(){
+  ["homePage","cartPage","checkoutPage","confirmPage","ordersPage"]
+    .forEach(id=>hide($(id)));
+}
+function showHome(){hideAllPages();show($("homePage"));}
+function showSignup(){hide($("loginPage"));hide($("appPage"));show($("signupPage"));}
+function showLogin(){hide($("signupPage"));hide($("appPage"));show($("loginPage"));}
+
+/* ---------- BOOT ---------- */
+function loadApp(){
+  const user=getUser();
+  if(!user){showLogin();return;}
+  renderProducts();updateBadge(user);
+  $("checkoutPage").querySelector("form").reset();
+  hide($("signupPage"));hide($("loginPage"));show($("appPage"));showHome();
+}
+loadApp();
+</script>
+</body>
+  </html>
